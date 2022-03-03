@@ -1,0 +1,109 @@
+// We can use channels to synchronize execution
+// across goroutines. Here's an example of using a
+// blocking receive to wait for a goroutine to finish.
+// When waiting for multiple goroutines to finish,
+// you may prefer to use a [WaitGroup](waitgroups).
+
+package main
+
+import (
+"fmt"
+  //"sync"
+  //"time"
+  "log"
+  "github.com/ethereum/go-ethereum/accounts/abi/bind"
+  "github.com/ethereum/go-ethereum/common"
+  "github.com/ethereum/go-ethereum/ethclient"
+  "github.com/googleapis/gax-go/tokens"
+  //"github.com/gin-gonic/gin"
+  "io/ioutil"
+  "net/http"
+  "os"
+  "encoding/json"
+)
+
+// This is the function we'll run in a goroutine. The
+// `done` channel will be used to notify another
+// goroutine that this function's work is done.
+
+func main() {
+
+	// Start a worker goroutine, giving it the channel to
+	// notify on.
+	done := make(chan bool, 1)
+	walAdd := "0xfC43f5F9dd45258b3AFf31Bdbe6561D97e8B71de"
+  address := common.HexToAddress(walAdd)
+  tokens_balance := make(map[string]string)
+  //r := gin.Default()
+  if err != nil {
+      log.Fatal(err)
+  }
+
+  res := getTokens()
+  for i := 1; i <= 200; i++ {
+ 
+    i := i
+    go func() {
+      tokenBalance(done, address, res[i], tokens_balance, client)
+    }()
+  }
+
+	// Block until we receive a notification from the
+	// worker on the channel.
+	<-done
+}
+
+func tokenBalance(done chan bool, address common.Address, tokAdd string, tokens_balance map[string]string, client bind.ContractBackend){
+    tokenAddress := common.HexToAddress(tokAdd)
+    instance, err := token.NewToken(tokenAddress, client)
+    if err != nil {
+        log.Fatal(err)
+    }
+    bal, err := instance.BalanceOf(&bind.CallOpts{}, address)
+    if err != nil {
+        log.Fatal(err)
+    }
+    //tokens_balance := <-tokens_balance
+    value := bal.String()
+    if value > "0" {
+       name, err := instance.Name(&bind.CallOpts{})
+        if err != nil {
+            log.Fatal(err)
+        }
+        tokens_balance[name] = value
+    }
+    fmt.Printf("Worker end", tokens_balance)
+}
+func getTokens() []string  {
+    response, err := http.Get("https://wispy-bird-88a7.uniswap.workers.dev/?url=http://tokens.1inch.eth.link")
+
+    if err != nil {
+        fmt.Print(err.Error())
+        os.Exit(1)
+    }
+
+    responseData, err := ioutil.ReadAll(response.Body)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    result := make(map[string]interface{})
+ 
+    // Unmarshal or Decode the JSON to the interface.
+    json.Unmarshal([]byte(responseData), &result)
+    tokens := result["tokens"].([]interface{})
+    a := []string{}
+
+    for _, value := range tokens {
+      // Each value is an interface{} type, that is type asserted as a string
+      //
+      for k, val := range value.(map[string]interface{}){
+        if k == "address" {
+            //fmt.Println(val.(string))
+            a = append(a, val.(string))
+            //a = val.(string)
+        }
+      }
+    }
+    return a
+}
